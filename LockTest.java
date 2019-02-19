@@ -1,4 +1,4 @@
-package com.ymkj.ams.common.util;
+package com.yuminsoft.ams.system.controller.approve;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -7,24 +7,27 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * 线程安全的hashMap
+ * ReentrantReadWriteLock 测试
+ * 读锁多线程  写锁单线程
+ * 是可重入锁 但是不支持降级
+ * new时候传的参数是否是公平锁 公平锁因为要排序，根据进入线程池队列的优先级排序，所以性能不如写锁 默认为非公平
  *
- * @author:Zhang jc
- * @date: 2018/9/18 16:19
+ * @Author: zhangjiachen
+ * @Date: 2019/2/19 9:40
+ * @Description:
  */
 public class LockTest {
-
     private static volatile Map data = new HashMap();
-    private static ReadWriteLock lock = new ReentrantReadWriteLock(false);
-    private static Lock readLock = LockTest.lock.readLock();
-    private static Lock writeLock = LockTest.lock.writeLock();
+    private static ReadWriteLock lock = new ReentrantReadWriteLock(true);
+    private static Lock readLock = lock.readLock();
+    private static Lock writeLock = lock.writeLock();
 
     /**
      * @author:Zhang jc
      * @date: 2018/9/18 16:19
      * @description: 写入数据
      */
-    public void setData(Object key, Object value) {
+    public static void setData(Object key, Object value) {
         //获取写入锁
         writeLock.lock();
         try {
@@ -32,7 +35,7 @@ public class LockTest {
         } catch (Exception e) {
             System.out.println("写入数据异常");
         } finally {
-            writeLock.unlock();
+//            writeLock.unlock();
         }
     }
 
@@ -41,7 +44,7 @@ public class LockTest {
      * @date: 2018/9/18 16:19
      * @description: 读取数据
      */
-    public Object getData(Object key) {
+    public static Object getData(Object key) {
         //获取读锁
         readLock.lock();
         Object result = null;
@@ -55,4 +58,51 @@ public class LockTest {
         return result;
     }
 
+    /**
+     * 锁升级（读锁升级为写锁） 不支持
+     *
+     * @param
+     * @return
+     * @author ZhangJiaChen
+     * @date 2019/2/19 10:33
+     **/
+    private static void upGradeLock() {
+        try {
+            ReentrantReadWriteLock rtl = new ReentrantReadWriteLock(false);
+            rtl.readLock().lock();
+            System.out.println("获取读锁");
+            rtl.writeLock().lock();
+            System.out.println("获取写锁");
+        } catch (Exception e) {
+            System.out.println("升级锁失败" + e.getMessage());
+        }
+    }
+
+    /**
+     * 锁降级(写锁降级为读锁)
+     *
+     * @param
+     * @return
+     * @author ZhangJiaChen
+     * @date 2019/2/19 10:36
+     **/
+    private static ReentrantReadWriteLock downLock() {
+        ReentrantReadWriteLock rtl = null;
+        try {
+            rtl = new ReentrantReadWriteLock(false);
+            rtl.writeLock().lock();
+            System.out.println("获取写锁");
+            rtl.readLock().lock();
+            System.out.println("获取读锁");
+        } catch (Exception e) {
+            System.out.println("降级锁失败" + e.getMessage());
+        }
+        return rtl;
+    }
+
+    public static void main(String[] args) {
+        ReentrantReadWriteLock rtw = downLock();
+        rtw.writeLock().lock();
+        System.out.println("第二次");
+    }
 }
